@@ -484,15 +484,21 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 
-  const firebaseConfig = {
+
+const firebaseConfig = {
   apiKey: "AIzaSyDyEq4sRpVGN1Y1vJk_JUt3lbn3JjV2EaA",
   authDomain: "contorl-ivess.firebaseapp.com",
   projectId: "contorl-ivess",
   storageBucket: "contorl-ivess.firebasestorage.app",
   messagingSenderId: "956291991288",
-  appId: "1:956291991288:web:bdd56701c4ed54478f1d0d",
-  measurementId: "G-QDKKXCYNPS"
+  appId: "1:956291991288:web:bdd56701c4ed54478f1d0d"
 };
+
+// 🔹 iniciar firebase
+firebase.initializeApp(firebaseConfig);
+
+// 🔹 conexión con firestore
+const db = firebase.firestore();
 
 function guardarRegistro(data) {
 
@@ -515,14 +521,22 @@ function cargarRegistros(){
 
     snapshot.forEach((doc)=>{
 
+      const data = doc.data();
+
       records.push({
         id: doc.id,
-        ...doc.data()
+        fecha: data.fecha,
+        reparto: data.reparto,
+        litros: data.litros,
+        tipo: data.tipo,
+        importe: data.importe
       });
 
     });
 
+    renderWeekTabs();
     renderTable();
+    renderStats();
 
   });
 
@@ -539,7 +553,6 @@ if (!records) {
   const raw = 
 
   records = raw.map((r, i) => ({ ...r, id: Date.now() + i }));
-  saveRecords();
 } 
 
 
@@ -686,7 +699,7 @@ function renderTable() {
       <td class="td-importe">${fmt(r.importe)}</td>
       <td>
 <button class="btn btn-secondary" onclick="editRecord(${r.id})">✏</button>
-<button class="btn btn-danger" onclick="deleteRecord(${r.id})">✕</button>
+<button class="btn btn-danger" onclick="deleteRecord('${r.id}')">✕</button>
 </td>
     </tr>`;
   }).join('');
@@ -694,12 +707,18 @@ function renderTable() {
   renderStats();
 }
 
-function deleteRecord(id) {
-  if (!confirm('¿Eliminar este registro?')) return;
-  records = records.filter(r => r.id !== id);
-  saveRecords();
-  renderWeekTabs();
-  renderTable();
+function deleteRecord(id){
+
+  if(!confirm("¿Eliminar este registro?")) return;
+
+  db.collection("registros").doc(String(id)).delete()
+  .then(()=>{
+    console.log("Registro eliminado");
+  })
+  .catch((error)=>{
+    console.error("Error eliminando:", error);
+  });
+
 }
 
 function editRecord(id){
@@ -771,6 +790,7 @@ function calcImporte() {
 }
 
 function saveRecord() {
+
   const fecha   = document.getElementById('inp-fecha').value;
   const reparto = parseInt(document.getElementById('inp-reparto').value);
   const litros  = parseFloat(document.getElementById('inp-litros').value) || 0;
@@ -778,13 +798,22 @@ function saveRecord() {
   const importe = parseFloat(document.getElementById('inp-importe').value);
 
   if (!fecha || !reparto || !tipo || !importe) {
-    alert('Por favor completá todos los campos obligatorios.'); return;
+    alert('Por favor completá todos los campos obligatorios.');
+    return;
   }
-  records.push({ id: Date.now(), fecha, reparto, litros, tipo, importe });
-  saveRecords();
+
+  const data = {
+    fecha,
+    reparto,
+    litros,
+    tipo,
+    importe
+  };
+
+  guardarRegistro(data); // 🔥 guarda en Firebase
+
   closeModal();
-  renderWeekTabs();
-  renderTable();
+
 }
 
 // ── MODAL PRICE ────────────────────────────────────────────────────────────
@@ -931,6 +960,8 @@ if(window.innerWidth < 600){
   });
 
 }
+
+cargarRegistros();
 </script>
 </body>
 </html>
