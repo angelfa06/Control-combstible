@@ -544,16 +544,9 @@ function cargarRegistros(){
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 let prices = JSON.parse(localStorage.getItem('cb_prices') || 'null') || { nafta: 2108, gasoil: 2457, gas: 2058 };
-let records = JSON.parse(localStorage.getItem('cb_records') || 'null');
+let records = [];
 let selectedWeek = 'all';
 let editingPrice = null;
-
-if (!records) {
-  // Pre-load data from image
-  const raw = 
-
-  records = raw.map((r, i) => ({ ...r, id: Date.now() + i }));
-} 
 
 
 function saveRecords() { localStorage.setItem('cb_records', JSON.stringify(records)); }
@@ -711,12 +704,12 @@ function deleteRecord(id){
 
   if(!confirm("¿Eliminar este registro?")) return;
 
-  db.collection("registros").doc(String(id)).delete()
+  db.collection("registros").doc(id).delete()
   .then(()=>{
     console.log("Registro eliminado");
   })
   .catch((error)=>{
-    console.error("Error eliminando:", error);
+    console.error("Error:", error);
   });
 
 }
@@ -742,14 +735,15 @@ function editRecord(id){
 
 function resetRecords(){
 
-  if(!confirm("Esto borrará TODOS los registros. ¿Continuar?")) return;
+  if(!confirm("Esto borrará todos los registros ¿Continuar?")) return;
 
-  records = [];
-  localStorage.removeItem("cb_records");
+  db.collection("registros").get().then((snapshot)=>{
 
-  renderWeekTabs();
-  renderTable();
-  renderStats();
+    snapshot.forEach((doc)=>{
+      db.collection("registros").doc(doc.id).delete();
+    });
+
+  });
 
 }
 
@@ -960,6 +954,10 @@ if(window.innerWidth < 600){
   });
 
 }
+
+window.onload = function(){
+  cargarRegistros();
+};
 
 cargarRegistros();
 </script>
