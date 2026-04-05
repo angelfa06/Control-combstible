@@ -6,6 +6,7 @@
 <title>Gestión de Combustible</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -316,6 +317,36 @@
     .badge-nafta { background: #e8f5e9; color: #2e7d32; }
     .badge-gasoil { background: #e3f2fd; color: #1565c0; }
     .badge-gas { background: #fff3e0; color: #e65100; }
+
+    .table-container{
+        overflow-x:auto;
+     }
+
+     @media (max-width: 768px){
+
+body{
+padding:10px;
+}
+
+.grid{
+grid-template-columns:1fr;
+}
+
+button{
+width:100%;
+margin-bottom:8px;
+}
+
+input,select{
+width:100%;
+}
+
+table{
+font-size:14px;
+}
+
+}
+
   }
 </style>
 </head>
@@ -381,6 +412,7 @@
   <div class="week-tabs" id="week-tabs"></div>
 
   <!-- TABLE -->
+   <div class="table-container">
   <div class="table-wrap">
     <div class="table-header-row">
       <span class="table-title">Registros de Combustible</span>
@@ -412,7 +444,7 @@
 <h3>📊 Consumo por reparto</h3>
 <div id="stats-reparto"></div>
 </div>
-
+</div>
   <!-- PDF SECTION -->
   <div class="pdf-section">
     <h3>📄 Exportar PDF</h3>
