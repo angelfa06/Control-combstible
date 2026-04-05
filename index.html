@@ -1,1 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Combustible</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
 
+  :root {
+    --bg: #0e0f14;
+    --panel: #161820;
+    --border: #252733;
+    --accent-fuel: #f5a623;
+    --accent-gas: #4fc3f7;
+    --accent-nafta: #66bb6a;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --danger: #ef5350;
+    --card-bg: #1c1e28;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent-fuel);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent-fuel); }
+
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  /* PRICE BAR */
+  .price-bar {
+    background: #111218;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 32px;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .price-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px;
+  }
+  .price-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .price-label { color: var(--muted); }
+  .price-value { font-weight: 600; font-size: 14px; }
+  .price-edit-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); padding: 2px 8px; border-radius: 4px;
+    cursor: pointer; font-size: 11px; transition: all .2s;
+  }
+  .price-edit-btn:hover { border-color: var(--accent-fuel); color: var(--accent-fuel); }
+
+  /* MAIN */
+  main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* STATS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color .2s;
+  }
+  .stat-card:hover { border-color: var(--accent-fuel); }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-value { font-size: 26px; font-weight: 600; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stat-nafta .stat-value { color: var(--accent-nafta); }
+  .stat-gasoil .stat-value { color: var(--accent-gas); }
+  .stat-gas .stat-value { color: var(--accent-fuel); }
+  .stat-total .stat-value { color: var(--text); }
+
+  /* TOOLBAR */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .toolbar-left { display: flex; gap: 10px; flex: 1; flex-wrap: wrap; }
+  .toolbar-right { display: flex; gap: 10px; }
+
+  input, select {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input:focus, select:focus { border-color: var(--accent-fuel); }
+  input::placeholder { color: var(--muted); }
+
+  .btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent-fuel); color: #000; }
+  .btn-primary:hover { background: #e69510; }
+  .btn-secondary { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent-fuel); color: var(--accent-fuel); }
+  .btn-pdf { background: var(--danger); color: #fff; }
+  .btn-pdf:hover { background: #d32f2f; }
+  .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 5px 10px; font-size: 12px; }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+
+  /* WEEK FILTER */
+  .week-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .week-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .2s;
+  }
+  .week-tab.active {
+    background: var(--accent-fuel);
+    border-color: var(--accent-fuel);
+    color: #000;
+    font-weight: 600;
+  }
+  .week-tab:hover:not(.active) { border-color: var(--accent-fuel); color: var(--text); }
+
+  /* TABLE */
+  .table-wrap {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .table-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-title { font-weight: 600; font-size: 15px; }
+  .table-count { font-size: 12px; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: #131520;
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(245,166,35,.04); }
+  td {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  .td-date { color: var(--muted); font-size: 12px; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-nafta { background: rgba(102,187,106,.12); color: var(--accent-nafta); }
+  .badge-gasoil { background: rgba(79,195,247,.12); color: var(--accent-gas); }
+  .badge-gas { background: rgba(245,166,35,.12); color: var(--accent-fuel); }
+  .td-importe { font-weight: 600; }
+  .week-chip {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 420px;
+    max-width: 95vw;
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 20px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* PDF PREVIEW SECTION */
+  .pdf-section {
+    margin-top: 28px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .pdf-section h3 { margin-bottom: 14px; font-size: 14px; }
+  .pdf-options {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* EMPTY */
+  .empty-state {
+    text-align: center;
+    padding: 48px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+
+  @media(max-width:600px){
+    header { padding: 0 16px; }
+    main { padding: 16px; }
+    .price-bar { padding: 8px 16px; gap: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .toolbar { flex-direction: column; }
+  }
+
+  @media print {
+    header, .price-bar, .toolbar, .week-tabs, .pdf-section, .btn, .btn-danger { display: none !important; }
+    body { background: #fff; color: #000; }
+    .table-wrap { border: 1px solid #ccc; }
+    table thead th { background: #f0f0f0; color: #333; }
+    .badge-nafta { background: #e8f5e9; color: #2e7d32; }
+    .badge-gasoil { background: #e3f2fd; color: #1565c0; }
+    .badge-gas { background: #fff3e0; color: #e65100; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⛽</div>
+    <h1>COMBUSTI<span>CTRL</span></h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="openModal()">+ Nuevo Registro</button>
+    <button class="btn btn-pdf" onclick="exportPDF()">📄 PDF Semanal</button>
+    <button class="btn btn-secondary" onclick="resetRecords()">Reiniciar</button>
+</div>
+</header>
+
+<div class="price-bar">
+  <div class="price-item">
+    <div class="price-dot" style="background:var(--accent-nafta)"></div>
+    <span class="price-label">Nafta</span>
+    <span class="price-value" id="nafta-price-display">$2.108</span>
+    <button class="price-edit-btn" onclick="editPrice('nafta')">editar</button>
+  </div>
+  <div class="price-item">
+    <div class="price-dot" style="background:var(--accent-gas)"></div>
+    <span class="price-label">Gasoil</span>
+    <span class="price-value" id="gasoil-price-display">$2.457</span>
+    <button class="price-edit-btn" onclick="editPrice('gasoil')">editar</button>
+  </div>
+  <div class="price-item">
+    <div class="price-dot" style="background:var(--accent-fuel)"></div>
+    <span class="price-label">Gas</span>
+    <span class="price-value" id="gas-price-display">$2.058</span>
+    <button class="price-edit-btn" onclick="editPrice('gas')">editar</button>
+  </div>
+  <span style="color:var(--muted);font-size:12px;margin-left:auto">Precios por litro (ARS)</span>
+</div>
+
+<main>
+  <!-- STATS -->
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <input type="text" id="search" placeholder="🔍 Buscar por reparto, tipo..." oninput="renderTable()">
+      <select id="filter-tipo" onchange="renderTable()">
+        <option value="">Todos los tipos</option>
+        <option value="nafta">Nafta</option>
+        <option value="gasoil">Gasoil</option>
+        <option value="gas">Gas</option>
+      </select>
+      <input type="date" id="filter-from" onchange="renderTable()">
+      <input type="date" id="filter-to" onchange="renderTable()">
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-secondary" onclick="clearFilters()">✕ Limpiar</button>
+    </div>
+  </div>
+
+  <!-- WEEK TABS -->
+  <div class="week-tabs" id="week-tabs"></div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-header-row">
+      <span class="table-title">Registros de Combustible</span>
+      <span class="table-count" id="table-count"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Semana</th>
+            <th>Reparto</th>
+            <th>Litros</th>
+            <th>Tipo</th>
+            <th>Importe</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty-state" style="display:none">
+      <div class="icon">⛽</div>
+      <p>No hay registros para los filtros seleccionados</p>
+    </div>
+    
+  </div>
+  <div class="pdf-section">
+<h3>📊 Consumo por reparto</h3>
+<div id="stats-reparto"></div>
+</div>
+
+  <!-- PDF SECTION -->
+  <div class="pdf-section">
+    <h3>📄 Exportar PDF</h3>
+    <div class="pdf-options">
+      <select id="pdf-week-select">
+        <option value="all">Todos los registros</option>
+      </select>
+      <button class="btn btn-pdf" onclick="exportPDF()">Generar PDF</button>
+      <span style="font-size:12px;color:var(--muted)">El PDF incluye resumen por tipo de combustible y detalle de registros</span>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL NUEVO REGISTRO -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>⛽ Nuevo Registro</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="inp-fecha">
+      </div>
+      <div class="form-group">
+        <label>Reparto Nº</label>
+        <input type="number" id="inp-reparto" placeholder="Ej: 10">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Litros</label>
+        <input type="number" id="inp-litros" placeholder="Ej: 20" oninput="calcImporte()">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="inp-tipo" onchange="calcImporte()">
+          <option value="nafta">Nafta</option>
+          <option value="gasoil">Gasoil</option>
+          <option value="gas">Gas</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Importe ($)</label>
+      <input type="number" id="inp-importe" placeholder="Se calcula automático">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRecord()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRECIO -->
+<div class="modal-overlay" id="modal-precio">
+  <div class="modal">
+    <h2 id="precio-modal-title">Editar precio</h2>
+    <div class="form-group">
+      <label>Precio por litro (ARS)</label>
+      <input type="number" id="inp-precio" placeholder="Ej: 2108">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closePrecioModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePrice()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDyEq4sRpVGN1Y1vJk_JUt3lbn3JjV2EaA",
+  authDomain: "contorl-ivess.firebaseapp.com",
+  projectId: "contorl-ivess",
+  storageBucket: "contorl-ivess.firebasestorage.app",
+  messagingSenderId: "956291991288",
+  appId: "1:956291991288:web:bdd56701c4ed54478f1d0d"
+};
+
+// 🔹 iniciar firebase
+firebase.initializeApp(firebaseConfig);
+
+// 🔹 conexión con firestore
+const db = firebase.firestore();
+
+function guardarRegistro(data) {
+
+  db.collection("registros").add(data)
+  .then(() => {
+    console.log("Registro guardado");
+  })
+  .catch((error) => {
+    console.error("Error:", error);
+  });
+
+}
+
+function cargarRegistros(){
+
+  db.collection("registros")
+  .onSnapshot((snapshot)=>{
+
+    records = [];
+
+    snapshot.forEach((doc)=>{
+
+      const data = doc.data();
+
+      records.push({
+        id: doc.id,
+        fecha: data.fecha,
+        reparto: data.reparto,
+        litros: data.litros,
+        tipo: data.tipo,
+        importe: data.importe
+      });
+
+    });
+
+    renderWeekTabs();
+    renderTable();
+    renderStats();
+
+  });
+
+}
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let prices = JSON.parse(localStorage.getItem('cb_prices') || 'null') || { nafta: 2108, gasoil: 2457, gas: 2058 };
+let records = [];
+let selectedWeek = 'all';
+let editingPrice = null;
+
+
+function saveRecords() { localStorage.setItem('cb_records', JSON.stringify(records)); }
+function savePrices()  { localStorage.setItem('cb_prices',  JSON.stringify(prices));  }
+
+// ── WEEK LOGIC ─────────────────────────────────────────────────────────────
+function getWeekKey(fecha) {
+  const d = new Date(fecha + 'T00:00:00');
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${String(week).padStart(2,'0')}`;
+}
+function weekLabel(wk) {
+  const [y, w] = wk.split('-W');
+  return `Semana ${w} / ${y}`;
+}
+
+function getWeeks() {
+  const ws = [...new Set(records.map(r => getWeekKey(r.fecha)))].sort();
+  return ws;
+}
+
+// ── FILTER ─────────────────────────────────────────────────────────────────
+function getFiltered() {
+  const q    = document.getElementById('search').value.toLowerCase();
+  const tipo = document.getElementById('filter-tipo').value;
+  const from = document.getElementById('filter-from').value;
+  const to   = document.getElementById('filter-to').value;
+
+  return records.filter(r => {
+    if (q && !(String(r.reparto).includes(q) || r.tipo.includes(q) || r.fecha.includes(q))) return false;
+    if (tipo && r.tipo !== tipo) return false;
+    if (from && r.fecha < from) return false;
+    if (to   && r.fecha > to)   return false;
+    if (selectedWeek !== 'all' && getWeekKey(r.fecha) !== selectedWeek) return false;
+    return true;
+  }).sort((a,b) => a.fecha.localeCompare(b.fecha) || a.reparto - b.reparto);
+}
+
+function clearFilters() {
+  document.getElementById('search').value = '';
+  document.getElementById('filter-tipo').value = '';
+  document.getElementById('filter-from').value = '';
+  document.getElementById('filter-to').value = '';
+  selectedWeek = 'all';
+  renderWeekTabs();
+  renderTable();
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function fmt(n) {
+  return '$ ' + Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function renderStats() {
+  const filtered = getFiltered();
+  const byTipo = (t) => filtered.filter(r => r.tipo === t);
+  const sum = arr => arr.reduce((a,r) => a + r.importe, 0);
+  const litros = arr => arr.reduce((a,r) => a + (r.litros||0), 0);
+
+  const nafta  = byTipo('nafta');
+  const gasoil = byTipo('gasoil');
+  const gas    = byTipo('gas');
+  const total  = filtered;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card stat-nafta">
+      <div class="stat-label">🟢 Nafta</div>
+      <div class="stat-value">${fmt(sum(nafta))}</div>
+      <div class="stat-sub">${litros(nafta)} lts · ${nafta.length} despachos</div>
+    </div>
+    <div class="stat-card stat-gasoil">
+      <div class="stat-label">🔵 Gasoil</div>
+      <div class="stat-value">${fmt(sum(gasoil))}</div>
+      <div class="stat-sub">${litros(gasoil)} lts · ${gasoil.length} despachos</div>
+    </div>
+    <div class="stat-card stat-gas">
+      <div class="stat-label">🟡 Gas</div>
+      <div class="stat-value">${fmt(sum(gas))}</div>
+      <div class="stat-sub">${gas.length} despachos</div>
+    </div>
+    <div class="stat-card stat-total">
+      <div class="stat-label">📊 Total período</div>
+      <div class="stat-value">${fmt(sum(total))}</div>
+      <div class="stat-sub">${total.length} registros en total</div>
+    </div>
+  `;
+}
+
+function renderWeekTabs() {
+  const weeks = getWeeks();
+  const container = document.getElementById('week-tabs');
+  let html = `<button class="week-tab ${selectedWeek==='all'?'active':''}" onclick="setWeek('all')">Todos</button>`;
+  weeks.forEach(w => {
+    html += `<button class="week-tab ${selectedWeek===w?'active':''}" onclick="setWeek('${w}')">${weekLabel(w)}</button>`;
+  });
+  container.innerHTML = html;
+
+  // PDF week select
+  const sel = document.getElementById('pdf-week-select');
+  sel.innerHTML = `<option value="all">Todos los registros</option>`;
+  weeks.forEach(w => {
+    sel.innerHTML += `<option value="${w}">${weekLabel(w)}</option>`;
+  });
+}
+
+function setWeek(w) {
+  selectedWeek = w;
+  renderWeekTabs();
+  renderTable();
+  renderStats();
+}
+
+function renderTable() {
+  const data = getFiltered();
+  const tbody = document.getElementById('table-body');
+  const empty = document.getElementById('empty-state');
+  document.getElementById('table-count').textContent = `${data.length} registros`;
+
+  if (!data.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    renderStats();
+    return;
+  }
+  empty.style.display = 'none';
+
+  let lastDate = '';
+  tbody.innerHTML = data.map(r => {
+    const dateStr = r.fecha !== lastDate ? (lastDate = r.fecha, fmtDate(r.fecha)) : '';
+    const wk = weekLabel(getWeekKey(r.fecha));
+    return `<tr>
+      <td class="td-date">${dateStr || ''}</td>
+      <td><span class="week-chip">${wk}</span></td>
+      <td><strong>Rep. ${r.reparto}</strong></td>
+      <td>${r.litros > 0 ? r.litros + ' L' : '—'}</td>
+      <td><span class="badge badge-${r.tipo}">${r.tipo.charAt(0).toUpperCase()+r.tipo.slice(1)}</span></td>
+      <td class="td-importe">${fmt(r.importe)}</td>
+      <td>
+<button class="btn btn-secondary" onclick="editRecord(${r.id})">✏</button>
+<button class="btn btn-danger" onclick="deleteRecord('${r.id}')">✕</button>
+</td>
+    </tr>`;
+  }).join('');
+
+  renderStats();
+}
+
+function deleteRecord(id){
+
+  if(!confirm("¿Eliminar este registro?")) return;
+
+  db.collection("registros").doc(id).delete()
+  .then(()=>{
+    console.log("Registro eliminado");
+  })
+  .catch((error)=>{
+    console.error("Error:", error);
+  });
+
+}
+
+function editRecord(id){
+
+  const r = records.find(x => x.id === id);
+
+  if(!r) return;
+
+  document.getElementById('inp-fecha').value = r.fecha;
+  document.getElementById('inp-reparto').value = r.reparto;
+  document.getElementById('inp-litros').value = r.litros;
+  document.getElementById('inp-tipo').value = r.tipo;
+  document.getElementById('inp-importe').value = r.importe;
+
+  document.getElementById('modal').classList.add('open');
+
+  // eliminar registro viejo para reemplazar
+  records = records.filter(x => x.id !== id);
+
+}
+
+function resetRecords(){
+
+  if(!confirm("Esto borrará todos los registros ¿Continuar?")) return;
+
+  db.collection("registros").get().then((snapshot)=>{
+
+    snapshot.forEach((doc)=>{
+      db.collection("registros").doc(doc.id).delete();
+    });
+
+  });
+
+}
+
+// ── MODAL ADD ──────────────────────────────────────────────────────────────
+function openModal() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('inp-fecha').value = today;
+  document.getElementById('inp-reparto').value = '';
+  document.getElementById('inp-litros').value = '';
+  document.getElementById('inp-tipo').value = 'nafta';
+  document.getElementById('inp-importe').value = '';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function calcImporte() {
+
+  const cantidad = parseFloat(document.getElementById('inp-litros').value);
+  const tipo = document.getElementById('inp-tipo').value;
+
+  if (!cantidad) {
+    document.getElementById('inp-importe').value = '';
+    return;
+  }
+
+  let importe = 0;
+
+  if (tipo === "gas") {
+    // GNC por m3
+    importe = cantidad * 930;
+  } else {
+    // nafta o gasoil por litro
+    importe = cantidad * prices[tipo];
+  }
+
+  document.getElementById('inp-importe').value = importe.toFixed(2);
+
+}
+
+function saveRecord() {
+
+  const fecha   = document.getElementById('inp-fecha').value;
+  const reparto = parseInt(document.getElementById('inp-reparto').value);
+  const litros  = parseFloat(document.getElementById('inp-litros').value) || 0;
+  const tipo    = document.getElementById('inp-tipo').value;
+  const importe = parseFloat(document.getElementById('inp-importe').value);
+
+  if (!fecha || !reparto || !tipo || !importe) {
+    alert('Por favor completá todos los campos obligatorios.');
+    return;
+  }
+
+  const data = {
+    fecha,
+    reparto,
+    litros,
+    tipo,
+    importe
+  };
+
+  guardarRegistro(data); // 🔥 guarda en Firebase
+
+  closeModal();
+
+}
+
+// ── MODAL PRICE ────────────────────────────────────────────────────────────
+function editPrice(tipo) {
+  editingPrice = tipo;
+  const nombres = { nafta:'Nafta', gasoil:'Gasoil', gas:'Gas' };
+  document.getElementById('precio-modal-title').textContent = `Editar precio — ${nombres[tipo]}`;
+  document.getElementById('inp-precio').value = prices[tipo];
+  document.getElementById('modal-precio').classList.add('open');
+}
+function closePrecioModal() { document.getElementById('modal-precio').classList.remove('open'); }
+function savePrice() {
+  const v = parseFloat(document.getElementById('inp-precio').value);
+  if (!v || v <= 0) { alert('Ingresá un precio válido.'); return; }
+  prices[editingPrice] = v;
+  savePrices();
+  closePrecioModal();
+  document.getElementById(`${editingPrice}-price-display`).textContent = `$${v.toLocaleString('es-AR')}`;
+}
+
+// ── PDF EXPORT ─────────────────────────────────────────────────────────────
+function exportPDF() {
+  const weekSel = document.getElementById('pdf-week-select').value;
+  const prevWeek = selectedWeek;
+  if (weekSel !== 'all') selectedWeek = weekSel;
+
+  const data = getFiltered();
+  selectedWeek = prevWeek;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+  const title = weekSel === 'all' ? 'Todos los Registros' : weekLabel(weekSel);
+  const fechaGen = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+  // HEADER
+  doc.setFillColor(14,15,20);
+  doc.rect(0,0,210,40,'F');
+  doc.setTextColor(245,166,35);
+  doc.setFontSize(22);
+  doc.setFont('helvetica','bold');
+  doc.text('COMBUSTI CTRL', 14, 18);
+  doc.setFontSize(10);
+  doc.setTextColor(180,180,180);
+  doc.text('Gestión de Combustible Empresarial', 14, 26);
+  doc.setFontSize(9);
+  doc.text(`Generado: ${fechaGen}`, 14, 33);
+  doc.setTextColor(245,166,35);
+  doc.text(title, 196, 18, { align:'right' });
+
+  // PRICES
+  doc.setFillColor(22,24,32);
+  doc.rect(0,40,210,16,'F');
+  doc.setFontSize(8);
+  doc.setTextColor(150,150,150);
+  doc.text(`Nafta: $${prices.nafta.toLocaleString('es-AR')}/L`, 14, 50);
+  doc.text(`Gasoil: $${prices.gasoil.toLocaleString('es-AR')}/L`, 60, 50);
+  doc.text(`Gas: $${prices.gas.toLocaleString('es-AR')}/L`, 110, 50);
+
+  // SUMMARY
+  const byTipo = (t) => data.filter(r => r.tipo === t);
+  const sum = arr => arr.reduce((a,r) => a + r.importe, 0);
+  const litros = arr => arr.reduce((a,r) => a + (r.litros||0), 0);
+  const nafta = byTipo('nafta');
+  const gasoil = byTipo('gasoil');
+  const gas = byTipo('gas');
+  const total = sum(data);
+
+  doc.setFontSize(10);
+  doc.setTextColor(40,40,40);
+  doc.setFont('helvetica','bold');
+  doc.text('RESUMEN DEL PERÍODO', 14, 66);
+
+  doc.autoTable({
+    startY: 70,
+    head: [['Tipo', 'Despachos', 'Litros', 'Total ($)']],
+    body: [
+      ['Nafta',  nafta.length,  litros(nafta) + ' L',  `$ ${sum(nafta).toLocaleString('es-AR', {minimumFractionDigits:2})}`],
+      ['Gasoil', gasoil.length, litros(gasoil) + ' L', `$ ${sum(gasoil).toLocaleString('es-AR', {minimumFractionDigits:2})}`],
+      ['Gas',    gas.length,    '—',                   `$ ${sum(gas).toLocaleString('es-AR', {minimumFractionDigits:2})}`],
+      ['TOTAL',  data.length,   litros(data) + ' L',   `$ ${total.toLocaleString('es-AR', {minimumFractionDigits:2})}`],
+    ],
+    headStyles: { fillColor:[14,15,20], textColor:[245,166,35], fontStyle:'bold', fontSize:9 },
+    bodyStyles: { fontSize:9 },
+    alternateRowStyles: { fillColor:[245,247,250] },
+    columnStyles: { 3:{ fontStyle:'bold' } },
+    foot: [],
+    margin: { left:14, right:14 }
+  });
+
+  // DETAIL TABLE
+  const startY2 = doc.lastAutoTable.finalY + 10;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text('DETALLE DE REGISTROS', 14, startY2);
+
+  const rows = data.map(r => [
+    fmtDate(r.fecha),
+    weekLabel(getWeekKey(r.fecha)),
+    `Rep. ${r.reparto}`,
+    r.litros > 0 ? r.litros + ' L' : '—',
+    r.tipo.charAt(0).toUpperCase() + r.tipo.slice(1),
+    `$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}`
+  ]);
+
+  doc.autoTable({
+    startY: startY2 + 4,
+    head: [['Fecha','Semana','Reparto','Litros','Tipo','Importe']],
+    body: rows,
+    headStyles: { fillColor:[14,15,20], textColor:[245,166,35], fontStyle:'bold', fontSize:8 },
+    bodyStyles: { fontSize:8 },
+    alternateRowStyles: { fillColor:[250,250,252] },
+    columnStyles: { 5:{ fontStyle:'bold' } },
+    margin: { left:14, right:14 }
+  });
+
+  // FOOTER
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(180,180,180);
+    doc.text(`Página ${i} de ${pageCount} — CombustiCtrl`, 105, 290, { align:'center' });
+  }
+
+  const fname = weekSel === 'all' ? 'combustible-total' : `combustible-${weekSel}`;
+  doc.save(`${fname}.pdf`);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+document.getElementById('inp-fecha').addEventListener && null;
+window.addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+  if (e.target === document.getElementById('modal-precio')) closePrecioModal();
+});
+
+renderWeekTabs();
+renderTable();
+
+if(window.innerWidth < 600){
+
+  document.querySelectorAll("input").forEach(i=>{
+    i.style.fontSize = "16px";
+  });
+
+}
+
+window.onload = function(){
+  cargarRegistros();
+};
+
+cargarRegistros();
+</script>
+</body>
+</html>
