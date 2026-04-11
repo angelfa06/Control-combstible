@@ -6,7 +6,6 @@
 <title>Gestión de Combustible</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -317,37 +316,25 @@
     .badge-nafta { background: #e8f5e9; color: #2e7d32; }
     .badge-gasoil { background: #e3f2fd; color: #1565c0; }
     .badge-gas { background: #fff3e0; color: #e65100; }
-
-    .table-container{
-        overflow-x:auto;
-     }
-
-     @media (max-width: 768px){
-
-body{
-padding:10px;
-}
-
-.grid{
-grid-template-columns:1fr;
-}
-
-button{
-width:100%;
-margin-bottom:8px;
-}
-
-input,select{
-width:100%;
-}
-
-table{
-font-size:14px;
-}
-
-}
-
   }
+
+  /* ── NAV ── */
+    .nav {
+      background: var(--ivess-dark);
+      display: flex; align-items: center;
+      padding: 0 1.5rem; height: 40px; gap: 4px;
+    }
+    .nav a {
+      color: rgba(255,255,255,0.65); font-size: 13px; font-weight: 500;
+      text-decoration: none; padding: 0 14px; height: 40px;
+      display: flex; align-items: center; border-bottom: 3px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 0.2px;
+    }
+    .nav a:hover { color: white; }
+    .nav a.active { color: white; border-bottom-color: var(--ivess-accent); }
+    .nav-sep { color: rgba(255,255,255,0.2); font-size: 16px; margin: 0 2px; }
+
 </style>
 </head>
 <body>
@@ -355,13 +342,18 @@ font-size:14px;
 <header>
   <div class="logo">
     <div class="logo-icon">⛽</div>
-    <h1>IVESS<span>CTRL</span></h1>
+    <h1>COMBUSTI<span>CTRL</span></h1>
   </div>
   <div class="header-actions">
     <button class="btn btn-primary" onclick="openModal()">+ Nuevo Registro</button>
     <button class="btn btn-pdf" onclick="exportPDF()">📄 PDF Semanal</button>
     <button class="btn btn-secondary" onclick="resetRecords()">Reiniciar</button>
 </div>
+  <nav class="nav">
+    <a href="https://angelfa06.github.io/Control-combstible/">🔥 Control de Combustible</a>
+    <span class="nav-sep">|</span>
+    <a href="https://angelfa06.github.io/control_frio_calor/" class="active">❄ Máquinas Frío/Calor</a>
+  </nav>
 </header>
 
 <div class="price-bar">
@@ -412,7 +404,6 @@ font-size:14px;
   <div class="week-tabs" id="week-tabs"></div>
 
   <!-- TABLE -->
-   <div class="table-container">
   <div class="table-wrap">
     <div class="table-header-row">
       <span class="table-title">Registros de Combustible</span>
@@ -444,7 +435,7 @@ font-size:14px;
 <h3>📊 Consumo por reparto</h3>
 <div id="stats-reparto"></div>
 </div>
-</div>
+
   <!-- PDF SECTION -->
   <div class="pdf-section">
     <h3>📄 Exportar PDF</h3>
@@ -516,21 +507,15 @@ font-size:14px;
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 
-
-const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyDyEq4sRpVGN1Y1vJk_JUt3lbn3JjV2EaA",
   authDomain: "contorl-ivess.firebaseapp.com",
   projectId: "contorl-ivess",
   storageBucket: "contorl-ivess.firebasestorage.app",
   messagingSenderId: "956291991288",
-  appId: "1:956291991288:web:bdd56701c4ed54478f1d0d"
+  appId: "1:956291991288:web:bdd56701c4ed54478f1d0d",
+  measurementId: "G-QDKKXCYNPS"
 };
-
-// 🔹 iniciar firebase
-firebase.initializeApp(firebaseConfig);
-
-// 🔹 conexión con firestore
-const db = firebase.firestore();
 
 function guardarRegistro(data) {
 
@@ -553,22 +538,14 @@ function cargarRegistros(){
 
     snapshot.forEach((doc)=>{
 
-      const data = doc.data();
-
       records.push({
         id: doc.id,
-        fecha: data.fecha,
-        reparto: data.reparto,
-        litros: data.litros,
-        tipo: data.tipo,
-        importe: data.importe
+        ...doc.data()
       });
 
     });
 
-    renderWeekTabs();
     renderTable();
-    renderStats();
 
   });
 
@@ -576,9 +553,17 @@ function cargarRegistros(){
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 let prices = JSON.parse(localStorage.getItem('cb_prices') || 'null') || { nafta: 2108, gasoil: 2457, gas: 2058 };
-let records = [];
+let records = JSON.parse(localStorage.getItem('cb_records') || 'null');
 let selectedWeek = 'all';
 let editingPrice = null;
+
+if (!records) {
+  // Pre-load data from image
+  const raw = 
+
+  records = raw.map((r, i) => ({ ...r, id: Date.now() + i }));
+  saveRecords();
+} 
 
 
 function saveRecords() { localStorage.setItem('cb_records', JSON.stringify(records)); }
@@ -724,7 +709,7 @@ function renderTable() {
       <td class="td-importe">${fmt(r.importe)}</td>
       <td>
 <button class="btn btn-secondary" onclick="editRecord(${r.id})">✏</button>
-<button class="btn btn-danger" onclick="deleteRecord('${r.id}')">✕</button>
+<button class="btn btn-danger" onclick="deleteRecord(${r.id})">✕</button>
 </td>
     </tr>`;
   }).join('');
@@ -732,18 +717,12 @@ function renderTable() {
   renderStats();
 }
 
-function deleteRecord(id){
-
-  if(!confirm("¿Eliminar este registro?")) return;
-
-  db.collection("registros").doc(id).delete()
-  .then(()=>{
-    console.log("Registro eliminado");
-  })
-  .catch((error)=>{
-    console.error("Error:", error);
-  });
-
+function deleteRecord(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  records = records.filter(r => r.id !== id);
+  saveRecords();
+  renderWeekTabs();
+  renderTable();
 }
 
 function editRecord(id){
@@ -767,15 +746,14 @@ function editRecord(id){
 
 function resetRecords(){
 
-  if(!confirm("Esto borrará todos los registros ¿Continuar?")) return;
+  if(!confirm("Esto borrará TODOS los registros. ¿Continuar?")) return;
 
-  db.collection("registros").get().then((snapshot)=>{
+  records = [];
+  localStorage.removeItem("cb_records");
 
-    snapshot.forEach((doc)=>{
-      db.collection("registros").doc(doc.id).delete();
-    });
-
-  });
+  renderWeekTabs();
+  renderTable();
+  renderStats();
 
 }
 
@@ -816,7 +794,6 @@ function calcImporte() {
 }
 
 function saveRecord() {
-
   const fecha   = document.getElementById('inp-fecha').value;
   const reparto = parseInt(document.getElementById('inp-reparto').value);
   const litros  = parseFloat(document.getElementById('inp-litros').value) || 0;
@@ -824,22 +801,13 @@ function saveRecord() {
   const importe = parseFloat(document.getElementById('inp-importe').value);
 
   if (!fecha || !reparto || !tipo || !importe) {
-    alert('Por favor completá todos los campos obligatorios.');
-    return;
+    alert('Por favor completá todos los campos obligatorios.'); return;
   }
-
-  const data = {
-    fecha,
-    reparto,
-    litros,
-    tipo,
-    importe
-  };
-
-  guardarRegistro(data); // 🔥 guarda en Firebase
-
+  records.push({ id: Date.now(), fecha, reparto, litros, tipo, importe });
+  saveRecords();
   closeModal();
-
+  renderWeekTabs();
+  renderTable();
 }
 
 // ── MODAL PRICE ────────────────────────────────────────────────────────────
@@ -986,12 +954,6 @@ if(window.innerWidth < 600){
   });
 
 }
-
-window.onload = function(){
-  cargarRegistros();
-};
-
-cargarRegistros();
 </script>
 </body>
 </html>
