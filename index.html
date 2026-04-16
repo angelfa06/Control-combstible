@@ -516,6 +516,8 @@
     appId: "1:956291991288:web:bdd56701c4ed54478f1d0d",
     measurementId: "G-QDKKXCYNPS"
   };
+    firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
   function guardarRegistro(data) {
 
@@ -529,27 +531,19 @@
 
   }
 
-  function cargarRegistros(){
-
-    db.collection("registros")
-    .onSnapshot((snapshot)=>{
-
-      records = [];
-
-      snapshot.forEach((doc)=>{
-
-        records.push({
-          id: doc.id,
-          ...doc.data()
-        });
-
+function cargarRegistros(){
+  db.collection("registros")
+  .onSnapshot((snapshot)=>{
+    records = [];
+    snapshot.forEach((doc)=>{
+      records.push({
+        id: doc.id,
+        ...doc.data()
       });
-
-      renderTable();
-
     });
-
-  }
+    renderTable();
+  });
+}
 
   // ── STATE ──────────────────────────────────────────────────────────────────
   let prices = JSON.parse(localStorage.getItem('cb_prices') || 'null') || { nafta: 2108, gasoil: 2457, gas: 2058 };
@@ -793,22 +787,29 @@
 
   }
 
-  function saveRecord() {
-    const fecha   = document.getElementById('inp-fecha').value;
-    const reparto = parseInt(document.getElementById('inp-reparto').value);
-    const litros  = parseFloat(document.getElementById('inp-litros').value) || 0;
-    const tipo    = document.getElementById('inp-tipo').value;
-    const importe = parseFloat(document.getElementById('inp-importe').value);
+function saveRecord() {
 
-    if (!fecha || !reparto || !tipo || !importe) {
-      alert('Por favor completá todos los campos obligatorios.'); return;
-    }
-    records.push({ id: Date.now(), fecha, reparto, litros, tipo, importe });
-    saveRecords();
-    closeModal();
-    renderWeekTabs();
-    renderTable();
+  const fecha   = document.getElementById('inp-fecha').value;
+  const reparto = parseInt(document.getElementById('inp-reparto').value);
+  const litros  = parseFloat(document.getElementById('inp-litros').value) || 0;
+  const tipo    = document.getElementById('inp-tipo').value;
+  const importe = parseFloat(document.getElementById('inp-importe').value);
+
+  if (!fecha || !reparto || !tipo || !importe) {
+    alert('Por favor completá todos los campos obligatorios.');
+    return;
   }
+
+  db.collection("registros").add({
+    fecha,
+    reparto,
+    litros,
+    tipo,
+    importe
+  });
+
+  closeModal();
+}
 
   // ── MODAL PRICE ────────────────────────────────────────────────────────────
   function editPrice(tipo) {
@@ -944,8 +945,11 @@
     if (e.target === document.getElementById('modal-precio')) closePrecioModal();
   });
 
-  renderWeekTabs();
-  renderTable();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+cargarRegistros();
+renderWeekTabs();
 
   if(window.innerWidth < 600){
 
